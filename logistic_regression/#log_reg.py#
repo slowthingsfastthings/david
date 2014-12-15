@@ -1,0 +1,6 @@
+# David Curry
+# Logistic regression using SciKit - Machine Learning
+
+import pylab as pl
+import numpy as np
+from sklearn import datasets, linear_model

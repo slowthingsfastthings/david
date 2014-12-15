@@ -1,0 +1,141 @@
+######################
+# For use in Kaggles bike competiion 
+#
+# by David Curry, 8/10/2014
+#
+#####################
+
+print '-----> Importing Modules'
+
+import csv as csv
+import numpy as np
+import pandas as pd
+import pylab as py
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn import cross_validation, metrics, linear_model, svm
+from ml_modules import *
+
+
+print '-----> Importing Data'
+
+train = pd.read_csv('train.csv')
+test  = pd.read_csv('test.csv') 
+
+# for train, always move known outcome to first column
+cols = train.columns.tolist()           # get column list
+train = train[ cols[-1:] + cols[:-1] ]  # put last coumn in front
+
+# Convert first column into hour(int)
+test['datetime']  = pd.to_datetime(test['datetime'])
+train['datetime'] = pd.to_datetime(train['datetime'])
+
+
+# add a new column for hour
+test['hours'] = ''
+for i in range(len(test.index)):
+    test.hours[i] = test.datetime[i].hour
+    
+train['hours'] = ''
+for i in range(len(train.index)):
+    train.hours[i] = train.datetime[i].hour    
+
+
+    
+# check for empty entries
+for col in test:
+    if len( test[test[col].isnull()] ) > 0: print col    
+
+for col in train:
+    if len( train[train[col].isnull()] ) > 0: print col   
+
+
+# Remove all colummns that are not similair to both test/train
+train = train.drop(['registered', 'casual', 'datetime'], axis=1)    
+
+# Lets make some new features form the good ones
+train['wind_humidty'] = train.windspeed * train.humidity
+train['hours_sqr']    = train.hours * train.hours
+train['hours+wind']   = train.hours + train.windspeed
+
+
+test['wind_humidty'] = test.windspeed * test.humidity
+test['hours_sqr']    = test.hours * test.hours
+test['hours+wind']   = test.hours + train.windspeed
+
+
+# Store datetime before removal
+date_ids = test['datetime']
+test  = test.drop(['datetime'], axis=1)
+
+#print '\n Train \n', train.info()
+#print '\n Test \n', test.info()
+
+# convert to numpy array
+train_data = train.values
+test_data  = test.values
+
+train_data_x = train_data[0::,1::]
+train_data_y = train_data[0::,0]
+
+# ================================================================================
+# Datasets are ready for SciKit Machine Learning!
+
+print '-----> Training...'
+
+#forest = RandomForestClassifier(n_estimators=100, 
+#                                max_features=None,
+#                                min_samples_split=2,
+#                                compute_importances=all)
+
+
+forest = RandomForestRegressor(n_estimators=10,
+                               max_features=None,
+                               min_samples_split=1,
+                               compute_importances=all)
+
+
+forest = forest.fit( train_data_x, train_data_y )
+
+
+# Lets try Support Vector Machines
+#vec = svm.SVR()
+
+#vec = vec.fit(train_data_x, train_data_y)
+
+
+# ===============================================================================
+# =================  Data PreSelections, Feature Selection, Covariance... =======
+
+# pipe forest into feature slection modules
+feature_selection_trees(forest)
+
+# Data Set covariance module
+covariance(train_data_x)
+
+
+
+
+# ==================================================================================
+
+print '-----> Predicting...'
+
+output = forest.predict(test_data).astype(int)
+
+
+print '\n======== Results =========\n'
+
+print metrics.classification_report(train_data_y, forest.predict(train_data_x) )
+
+print sklearn.metrics.r2_score(train_data_y, forest.predict(train_data_x) )
+
+# ===================================================================================
+# Save into Kaggle submission format
+'''
+predictions_file = open("bike_results_random_forest.csv", "wb")
+open_file_object = csv.writer(predictions_file)
+open_file_object.writerow(["datetime","count"])
+open_file_object.writerows(zip(date_ids, output))
+predictions_file.close()
+print '-----> Done.'   '''
+
+

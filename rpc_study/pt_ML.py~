@@ -1,0 +1,76 @@
+#  A script to perform machine learning lagos on cms pt data
+#
+# By David Curry
+#
+#
+
+import sys
+import numpy as np
+from sklearn import datasets, linear_model
+import pylab as pl
+
+print '\n\n ======== You Are Now Running pt_ML.py .... Good Luck! =======\n\n'
+
+# Set the print level. Default = 0
+if len(sys.argv) is 1: printLevel = 0
+else: printLevel = sys.argv[1]
+
+#### Open data file ####
+print '---> Importing the Dataset\n' 
+data = np.loadtxt('test.txt')
+
+#### Split dataset into training(70%) and test(30%) ####
+
+print 'Data shape = ' , data.shape
+print 'Num data points = ', data.shape[0] 
+
+print '---> Splitting Into Training(70%) and Test(30%) Sets\n'
+train_data = data[0: 0.7*data.shape[0] , :]
+test_data  = data[0: 0.3*data.shape[0] , :]
+
+# Create linear regression object
+regr = linear_model.LinearRegression()
+
+#### Create Regularized Regression(Ridge technique) ####
+ridge = linear_model.Ridge()
+
+
+print '---> Training On Data\n'
+
+#This part is dataset dependent. 
+# First 6 columns are variables, 7th column is pt
+
+train_data_x = train_data[:, 0:6]
+train_data_y = train_data[:, 6]
+
+test_data_x = test_data[:, 0:6]
+test_data_y = test_data[:, 6]
+
+#print 'Train data x shape = ', train_data_x.shape
+#print 'Train data y shape = ', train_data_y.shape
+
+regr.fit(train_data_x, train_data_y)
+ridge.fit(train_data_x, train_data_y)
+
+
+print ' ====== Results of ML Techniques ======'
+print ' Linear Regression:'
+print '                   Variance Score = ', regr.score(test_data_x, test_data_y)   
+print ' Ridge Regression:'
+print '                   Variance Score = ', ridge.score(test_data_x, test_data_y)
+
+
+#### Store the coefficients to file ####
+
+
+
+
+
+# ==== Plot the resolution of test data =====
+pl.ion()
+pl.hist( (regr.predict(test_data_x) - test_data_y)/test_data_y , bins = 50, range = (-3,3) )
+pl.show()
+_ = raw_input("Press [enter] to continue.")
+pl.close()
+
+
