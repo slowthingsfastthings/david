@@ -16,11 +16,51 @@ from datetime import datetime
 from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import classification_report
 from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import precision_recall_curve, average_precision_score
 from sklearn.svm import SVC, LinearSVC
 from sklearn.preprocessing import label_binarize
-from sklearn.multiclass import OneVsRestClassifier
+from sklearn.multiclass import OneVsRestClassifier, OneVsOneClassifier
 from sklearn.dummy import DummyClassifier
 import pandas as pd
+
+
+# =================  Start Modules ======================
+
+
+def num_data_accuarcy(dataframe):
+
+    '''
+    Create plot of amount of data vs training accuracy.  Takes in pandas dataframe.
+    '''
+
+    print '-----> Perfroming Data Accuracy Tests...'
+
+    # convert pandas to numpy array
+    dataset = dataframe.values
+    
+    # loop over different partitioned dataset
+    print dataset.shape[1]
+    #train.ix[np.random.choice(train.index, 1000)]
+    #data_precent = [
+    
+    # split training set into a test and train part.  80% train, 20% Test
+    train_data, test_data = cross_validation.train_test_split(dataset, test_size=0.4, random_state=42)
+
+    # Now split the data into x(features) and y(known outcomes)
+    train_data_x = train_data[:, 1:]
+    train_data_y = train_data[:, 0]
+
+    test_data_x = test_data[:, 1:]
+    test_data_y = test_data[:, 0]
+    
+    
+
+
+
+
+
+# end num_data_accuarcy ================================
+
 
 
 
@@ -91,14 +131,14 @@ def accuracy_svm(dataframe):
     # Now split the data into x(features) and y(known outcomes)
     train_data_x = train_data[:, 1:]
     train_data_y = train_data[:, 0]
-
+    
     test_data_x = test_data[:, 1:]
     test_data_y = test_data[:, 0]
-
+    
     # scale the data for SVM input
     test_data_x, train_data_x = preprocessing.scale(test_data_x), preprocessing.scale(train_data_x)
-
-
+    
+    
     #  ==== choose 1 v 1, or 1 v rest  =========
     #algorithm = SVC; title = 'SVM:one_v_one'
 
@@ -110,7 +150,7 @@ def accuracy_svm(dataframe):
         one_v_one = algorithm( C=1.0, 
                                cache_size=1000
                                )
-    
+        
         one_v_one.fit(train_data_x, train_data_y)
         
         one_v_one.predict(test_data_x)
@@ -132,7 +172,105 @@ def accuracy_svm(dataframe):
 
 
 
-def roc(dataframe, algorithm):
+def precision_recall(dataframe):
+    
+    '''
+    Takes in pandas dataframe and makes precision_recall plots.
+    Used for classification tasks.
+    '''
+
+    print '-----> Performing Precision-Recall Tests...'
+
+    # convert pandas to numpy
+    dataset = dataframe.values
+
+    # Manually enter the target lables
+    target_names = [1,2,3,4,5,6,7]
+
+    # split training set into a test and train part.  80% train, 20% Test
+    train_data, test_data = cross_validation.train_test_split(dataset, test_size=0.4, random_state=42)
+
+    # Now split the data into x(features) and y(known outcomes)
+    train_data_x = train_data[:, 1:]
+    train_data_y = train_data[:, 0]
+
+    test_data_x = test_data[:, 1:]
+    test_data_y = test_data[:, 0]
+
+    # Binarize the output
+    train_data_y = label_binarize(train_data_y, classes = target_names)
+    test_data_y  = label_binarize(test_data_y, classes = target_names)
+    n_classes = test_data_y.shape[1]
+
+    # ======== Choose Algorithm ===========
+
+    #algorithm = SVC; title = 'SVC'
+
+    #algorithm = LinearSVC; title = 'LinearSVC'
+
+    algorithm = RandomForestClassifier; title = 'RandomForestClassifier'
+    
+
+
+    # =========== Random Forest Classifier =============
+    if algorithm is RandomForestClassifier:
+
+        # Implement the algorithm
+        classifier = OneVsRestClassifier( algorithm(n_estimators = 1000,
+                                                    n_jobs = -1),
+                                          n_jobs = -1)
+
+        # Fit the data, get the per class scores
+        classifier.fit( train_data_x, train_data_y )
+        y_score = classifier.predict_proba(test_data_x)
+
+    # ========== end Random Forest Classifier ===========
+
+
+    # Compute Precision-Recall and plot curve
+    precision = dict()
+    recall = dict()
+    average_precision = dict()
+    for i in range(n_classes):
+        precision[i], recall[i], _ = precision_recall_curve(test_data_y[:, i],
+                                                            y_score[:, i])
+        average_precision[i] = average_precision_score(test_data_y[:, i], y_score[:, i])
+
+    # Compute micro-average ROC curve and ROC area
+        precision["micro"], recall["micro"], _ = precision_recall_curve(test_data_y.ravel(),
+                                                                        y_score.ravel())
+        average_precision["micro"] = average_precision_score(test_data_y, y_score,
+                                                             average="micro")
+        
+
+    # Plot Precision-Recall curve for each class
+
+    plt.plot(recall["micro"], precision["micro"],
+             label='micro-average Precision-recall curve (area = {0:0.2f})'
+             ''.format(average_precision["micro"]))
+    for i in range(n_classes):
+        plt.plot(recall[i], precision[i],
+                 label='Precision-recall curve of class {0} (area = {1:0.2f})'
+                 ''.format(i, average_precision[i]))
+
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.title('Precision-Recall: '+title)
+    plt.legend(loc="lower right")
+    plt.savefig('crossVal/prec_recall_'+title+'.pdf')
+
+
+
+
+# ====== end precision_recall
+
+
+
+
+
+def roc(dataframe):
     
     '''
     Creates ROC curve plots for classification.  Can also perform multiclass ROC curves.  
@@ -162,16 +300,64 @@ def roc(dataframe, algorithm):
     test_data_y  = label_binarize(test_data_y, classes = target_names)
     n_classes = test_data_y.shape[1]
     
-    # Learn to predict each class against the other
-    #classifier = OneVsRestClassifier(svm.SVC(kernel='linear', probability=True))
+    # ======== Choose Algorithm ===========
+
+    #algorithm = SVC; title = 'SVC'
     
-    forest = RandomForestClassifier(n_estimators = 100, n_jobs=-1)
+    algorithm = LinearSVC; title = 'LinearSVC'
+    
+    #algorithm = RandomForestClassifier; title = 'RandomForestClassifier'
+    
+        
+    
+    # =========== Random Forest Classifier =============
+    if algorithm is RandomForestClassifier:
+    
+        # Implement the algorithm
+        classifier = OneVsRestClassifier( algorithm(n_estimators = 1000) )
+                               
+        # Fit the data, get the per class scores
+        classifier.fit( train_data_x, train_data_y )
+        classifier_score = classifier.predict_proba(test_data_x)
 
-    # Fit the data
-    forest = forest.fit( train_data_x, train_data_y )
+    # ========== end Random Forest Classifier ===========
 
-    # Fit the data and get the classification score for each event
-    classifier_score = forest.score(test_data_x, test_data_y)
+
+
+
+    # ========= SVC ==============
+    if algorithm is SVC:
+        
+        # scale the data
+        test_data_x, train_data_x = preprocessing.scale(test_data_x), preprocessing.scale(train_data_x)
+
+        classifier = OneVsRestClassifier( algorithm( cache_size = 1000 
+                                                     ), 
+                                          n_jobs= -1 )
+
+        # Fit the data, get the per class scores
+        classifier.fit( train_data_x, train_data_y )
+        classifier_score = classifier.decision_function(test_data_x)
+
+
+
+
+    # ======== Linear SVC ===========
+    if algorithm is LinearSVC:
+        
+        # scale the data
+        test_data_x, train_data_x = preprocessing.scale(test_data_x), preprocessing.scale(train_data_x)
+        
+        classifier = OneVsRestClassifier( SVC(kernel = 'linear'),
+                                          n_jobs = -1
+                                          )
+        
+         # Fit the data, get the per class scores
+        classifier.fit( train_data_x, train_data_y )
+        classifier_score = classifier.decision_function(test_data_x)
+
+
+
     
     # Compute ROC curve and ROC area for each class
     fpr = dict()
@@ -183,21 +369,25 @@ def roc(dataframe, algorithm):
     
         
     # Compute micro-average ROC curve and ROC area
-    fpr["micro"], tpr["micro"], _ = roc_curve(y_test.ravel(), classifier_score.ravel())
+    fpr["micro"], tpr["micro"], _ = roc_curve(test_data_y.ravel(), classifier_score.ravel())
     roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
+    
+    # Plot ROC curve
+    plt.plot(fpr["micro"], tpr["micro"],
+             label='micro-average ROC curve (area = {0:0.2f})'
+             ''.format(roc_auc["micro"]))
+    for i in range(n_classes):
+        plt.plot(fpr[i], tpr[i], label='ROC curve of class {0} (area = {1:0.2f})'
+                 ''.format(i, roc_auc[i]))
 
-    # Plot of a ROC curve for a specific class
-    plt.figure()
-    plt.plot(fpr[2], tpr[2], label='ROC curve (area = %0.2f)' % roc_auc[2])
     plt.plot([0, 1], [0, 1], 'k--')
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
-    plt.title('Receiver operating characteristic example')
+    plt.title('ROC: '+title)
     plt.legend(loc="lower right")
-    plt.show()
-
+    plt.savefig('crossVal/roc_'+title+'.pdf')
 
 
 
@@ -384,7 +574,56 @@ def confusion_Matrix(dataframe):
 
 
 
-def train_optimizer(dataframe):
+def optimizer_svm(dataframe):
+
+    '''
+    Takes in pandas dataframe and uses scikit to perform SVM paramter optimization
+    '''
+    
+    print '\n\n============ Optimiziing Search Space =============\n'
+    
+     # convert pandas to numpy array
+    dataset = dataframe.values
+
+    # split training set into a test and train part.  80% train, 20% Test
+    train_data, test_data = cross_validation.train_test_split(dataset, test_size=0.2, random_state=42)
+
+    # Now split the data into x(features) and y(known outcomes)
+    train_data_x = train_data[:, 1:]
+    train_data_y = train_data[:, 0]
+
+    test_data_x = test_data[:, 1:]
+    test_data_y = test_data[:, 0]
+
+    # scale the data
+    test_data_x, train_data_x = preprocessing.scale(test_data_x), preprocessing.scale(train_data_x)
+
+    # define the parameter search space
+    search_space = [ { 
+            #'C': np.exp2([1, 7, 10]),
+            #'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],
+            'gamma': np.exp2([1, 2, 3, 4, 5])
+            } ]
+    
+    # Define the type of algrothm to employ
+    model = SVC(cache_size=1000)
+    
+    cv = GridSearchCV(
+        model,
+        search_space,
+        scoring='accuracy')
+
+    cv.fit(train_data_x, train_data_y)
+    
+    print '\n Best parameters found on training set:', cv.best_estimator_
+
+
+
+
+# end optimizer_svm ============
+
+
+def optimizer_trees(dataframe):
     
     '''
     Takes in pandas dataframe and uses scikit to perform several cross validation tests. PLots and results are printed

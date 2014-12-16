@@ -121,6 +121,9 @@ if crossVal:
     
     print '-----> Performing Cross Validation...'
     
+    # plot accurCY AS A FUNCTION OF EVENTS
+    num_data_accuracy(train)
+ 
     # test/train accuracy for trees
     #accuracy_trees(train)
     
@@ -128,8 +131,12 @@ if crossVal:
     #accuracy_svm(train)
     
     # Make ROC plots
-    roc(train)
+    #roc(train)
     
+    # precision_recall plots
+    #precision_recall(train)
+    
+
     # Make confusion matrix for multiclass classification
     #confusion_Matrix(train)
     
@@ -141,9 +148,11 @@ if optimize:
     
     print '-----> Performing Parameter Optimization...'
     
-    train_optimizer(train)
+    #optimizer_trees(train)
     
-    
+    # parameter optimization for SVMs
+    optimizer_svm(train)
+
     
     
 
