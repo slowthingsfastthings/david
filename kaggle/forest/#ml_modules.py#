@@ -110,7 +110,7 @@ def accuracy_svm(dataframe):
         one_v_one = algorithm( C=1.0, 
                                cache_size=1000
                                )
-    
+        
         one_v_one.fit(train_data_x, train_data_y)
         
         one_v_one.predict(test_data_x)

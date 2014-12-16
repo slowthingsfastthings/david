@@ -15,6 +15,7 @@
 
 print '-----> Importing Modules'
 
+import sys
 import csv as csv
 import numpy as np
 import pandas as pd
@@ -124,14 +125,16 @@ if crossVal:
     #accuracy_trees(train)
     
     # accuracy for SVMs
-    accuracy_svm(train)
+    #accuracy_svm(train)
     
     # Make ROC plots
-    #roc(train, GradientBoostingClassifier)
+    roc(train)
     
     # Make confusion matrix for multiclass classification
     #confusion_Matrix(train)
     
+    
+
 
 # ============= Parameter Optimization ============
 if optimize: 
